@@ -383,33 +383,32 @@ Function UpdateMainMenu()
 				AASetFont Font2
 				
 				If DrawButton(x + 420 * MenuScale, y + height + 20 * MenuScale, 160 * MenuScale, 70 * MenuScale, "START", False) Then
-					If CurrSave <> "" Then
-						If RandomSeed = "" Then
-							RandomSeed = Abs(MilliSecs())
-						EndIf
-						Local strtemp$ = ""
-						For i = 1 To Len(RandomSeed)
-							strtemp = strtemp+Asc(Mid(RandomSeed,i,1))
-						Next
-						SeedRnd Abs(Int(strtemp))
+					If CurrSave = "" Then CurrSave = "untitled"
+					
+					If RandomSeed = "" Then
+						RandomSeed = Abs(MilliSecs())
+					EndIf
+					Local strtemp$ = ""
+					For i = 1 To Len(RandomSeed)
+						strtemp = strtemp+Asc(Mid(RandomSeed,i,1))
+					Next
+					SeedRnd Abs(Int(strtemp))
+					
+					Local SameFound% = False
+					
+					For  i% = 1 To SaveGameAmount
+						If SaveGames(i - 1) = CurrSave Then SameFound = SameFound + 1
+					Next
 						
-						Local SameFound% = False
-						For  i% = 1 To SaveGameAmount
-							If SaveGames(i - 1) = CurrSave Then SameFound=SameFound+1
-						Next
-						
-						If SameFound > 0 Then CurrSave = CurrSave + " (" + (SameFound + 1) + ")"
-						
-						LoadEntities()
-						InitNewGame()
-						MainMenuOpen = False
-						FlushKeys()
-						FlushMouse()
-						
-						PutINIValue(OptionFile, "options", "intro enabled", IntroEnabled%)
-					Else
-						
-					End If
+					If SameFound > 0 Then CurrSave = CurrSave + " (" + (SameFound + 1) + ")"
+					
+					LoadEntities()
+					InitNewGame()
+					MainMenuOpen = False
+					FlushKeys()
+					FlushMouse()
+					
+					PutINIValue(OptionFile, "options", "intro enabled", IntroEnabled%)
 					
 				EndIf
 				
@@ -470,11 +469,11 @@ Function UpdateMainMenu()
 						Else
 							DrawFrame(x + 280 * MenuScale, y + 20 * MenuScale, 100 * MenuScale, 30 * MenuScale)
 							Color(100, 100, 100)
-							AAText(x + 330 * MenuScale, y + 35 * MenuScale, "Load", True, True)
+							AAText(x + 330 * MenuScale, y + 34 * MenuScale, "Load", True, True)
 							
 							DrawFrame(x + 400 * MenuScale, y + 20 * MenuScale, 100 * MenuScale, 30 * MenuScale)
 							Color(100, 100, 100)
-							AAText(x + 450 * MenuScale, y + 35 * MenuScale, "Delete", True, True)
+							AAText(x + 450 * MenuScale, y + 34 * MenuScale, "Delete", True, True)
 						EndIf
 						
 						y = y + 80 * MenuScale
@@ -484,8 +483,9 @@ Function UpdateMainMenu()
 					If SaveMSG <> ""
 						x = GraphicWidth / 2
 						y = GraphicHeight / 2
-						DrawFrame(x, y, 400 * MenuScale, 200 * MenuScale)
-						AAText(x + 20 * MenuScale, y + 15 * MenuScale, "Are you sure you want to delete this save?")
+						DrawFrame(x, y, 420 * MenuScale, 200 * MenuScale)
+						RowText("Are you sure you want to delete this save?", x + 20 * MenuScale, y + 15 * MenuScale, 400 * MenuScale, 200 * MenuScale)
+						;AAText(x + 20 * MenuScale, y + 15 * MenuScale, "Are you sure you want to delete this save?")
 						If DrawButton(x + 250 * MenuScale, y + 150 * MenuScale, 100 * MenuScale, 30 * MenuScale, "Yes", False) Then
 							DeleteFile(CurrentDir() + SavePath + SaveMSG + "\save.txt")
 							DeleteDir(CurrentDir() + SavePath + SaveMSG)
@@ -550,20 +550,20 @@ Function UpdateMainMenu()
 				
 				If MainMenuTab = 3 ;Graphics
 					;[Block]
-					height = 320 * MenuScale
+					height = 330 * MenuScale
 					DrawFrame(x, y, width, height)
 					
 					y=y+20*MenuScale
 					
-					;Color 100,100,100				
-					;AAText(x + 20 * MenuScale, y, "Enable bump mapping:")	
-					;DrawTick(x + 310 * MenuScale, y + MenuScale, False, True)
-					;If MouseOn(x + 310 * MenuScale, y + MenuScale, 20*MenuScale,20*MenuScale) And OnSliderID=0
+					Color 255,255,255				
+					AAText(x + 20 * MenuScale, y, "Enable bump mapping:")	
+					BumpEnabled = DrawTick(x + 310 * MenuScale, y + MenuScale, BumpEnabled)
+					If MouseOn(x + 310 * MenuScale, y + MenuScale, 20*MenuScale,20*MenuScale) And OnSliderID=0
 						;DrawTooltip("Not available in this version")
-					;	DrawOptionsTooltip(tx,ty,tw,th,"bump")
-					;EndIf
+						DrawOptionsTooltip(tx,ty,tw,th,"bump")
+					EndIf
 					
-					;y=y+30*MenuScale
+					y=y+30*MenuScale
 					
 					Color 255,255,255
 					AAText(x + 20 * MenuScale, y, "VSync:")
@@ -657,6 +657,28 @@ Function UpdateMainMenu()
 					ParticleAmount = Slider3(x+310*MenuScale,y+6*MenuScale,150*MenuScale,ParticleAmount,2,"MINIMAL","REDUCED","FULL")
 					If (MouseOn(x + 310 * MenuScale, y-6*MenuScale, 150*MenuScale+14, 20) And OnSliderID=0) Or OnSliderID=2
 						DrawOptionsTooltip(tx,ty,tw,th,"particleamount",ParticleAmount)
+					EndIf
+					
+					y=y+50*MenuScale
+					
+					Color 255,255,255
+					AAText(x + 20 * MenuScale, y, "Texture LOD Bias:")
+					TextureDetails = Slider5(x+310*MenuScale,y+6*MenuScale,150*MenuScale,TextureDetails,3,"0.8","0.4","0.0","-0.4","-0.8")
+							Select TextureDetails%
+								Case 0
+							TextureFloat# = 0.8
+								Case 1
+									TextureFloat# = 0.4
+								Case 2
+							TextureFloat# = 0.0
+								Case 3
+									TextureFloat# = -0.4
+						Case 4
+							TextureFloat# = -0.8
+							End Select
+							TextureLodBias TextureFloat
+					If (MouseOn(x+310*MenuScale,y-6*MenuScale,150*MenuScale+14,20) And OnSliderID=0) Or OnSliderID=3
+						DrawOptionsTooltip(tx,ty,tw,th+100*MenuScale,"texquality")
 					EndIf
 					
 ;					y=y+50*MenuScale
@@ -1861,8 +1883,8 @@ Function DrawOptionsTooltip(x%,y%,width%,height%,option$,value#=0,ingame%=False)
 		;Graphic options
 			;[Block]
 		Case "bump"
-			txt = Chr(34)+"Bump mapping"+Chr(34)+" is used to simulate details on textures through the use of lighting calculations."
-			txt2 = "Due to the removal of FastExtension in version 1.3.1 the feature is no longer available."
+			txt = Chr(34)+"Bump mapping"+Chr(34)+" is used to simulate bumps and dents by distorting the lightmaps."
+			txt2 = "This option cannot be changed in-game."
 			R = 255
 		Case "vsync"
 			txt = Chr(34)+"Vertical sync"+Chr(34)+" waits for the display to finish its current refresh cycle before calculating the next frame, preventing issues such as "
@@ -1877,7 +1899,7 @@ Function DrawOptionsTooltip(x%,y%,width%,height%,option$,value#=0,ingame%=False)
 			txt = Chr(34)+"Gamma correction"+Chr(34)+" is used to achieve a good brightness factor to balance out your display's gamma if the game appears either too dark or bright. "
 			txt = txt + "Setting it too high or low can cause the graphics to look less detailed."
 		Case "texquality"
-			txt = Chr(34)+"Texture quality"+Chr(34)+" smooths out the rendering of textures at extreme angles, making them appear less warped."
+			txt = Chr(34)+"Texture LOD Bias"+Chr(34)+" affects the distance at which texture detail will change to prevent aliasing. Change this option if textures flicker or look too blurry."
 		Case "resquality"
 			txt = Chr(34)+"Resolution quality"+Chr(34)+" adjusts the resolution at which the game will render."
 			txt2 = "The game will render at "
@@ -2060,6 +2082,72 @@ Function Slider3(x%,y%,width%,value%,ID%,val1$,val2$,val3$)
 		AAText(x+(width/2)+7,y+10+MenuScale,val2,True)
 	Else
 		AAText(x+width+12,y+10+MenuScale,val3,True)
+	EndIf
+	
+	Return value
+	
+End Function
+
+Function Slider5(x%,y%,width%,value%,ID%,val1$,val2$,val3$,val4$,val5$)
+	
+	If MouseDown1 Then
+		If (ScaledMouseX() >= x) And (ScaledMouseX() <= x+width+14) And (ScaledMouseY() >= y-8) And (ScaledMouseY() <= y+10)
+			OnSliderID = ID
+		EndIf
+	EndIf
+	
+	Color 200,200,200
+	Rect(x,y,width+14,10,True)
+	Rect(x,y-8,4,14,True) ;1
+	Rect(x+(width/4)+2.5,y-8,4,14,True) ;2
+	Rect(x+(width/2)+5,y-8,4,14,True) ;3
+	Rect(x+(width*0.75)+7.5,y-8,4,14,True) ;4
+	Rect(x+width+10,y-8,4,14,True) ;5
+	
+	If ID = OnSliderID
+		If (ScaledMouseX() <= x+8)
+			value = 0
+		ElseIf (ScaledMouseX() >= x+width/4) And (ScaledMouseX() <= x+(width/4)+8)
+			value = 1
+		ElseIf (ScaledMouseX() >= x+width/2) And (ScaledMouseX() <= x+(width/2)+8)
+			value = 2
+		ElseIf (ScaledMouseX() >= x+width*0.75) And (ScaledMouseX() <= x+(width*0.75)+8)
+			value = 3
+		ElseIf (ScaledMouseX() >= x+width)
+			value = 4
+		EndIf
+		Color 0,255,0
+		Rect(x,y,width+14,10,True)
+	Else
+		If (ScaledMouseX() >= x) And (ScaledMouseX() <= x+width+14) And (ScaledMouseY() >= y-8) And (ScaledMouseY() <= y+10)
+			Color 0,200,0
+			Rect(x,y,width+14,10,False)
+		EndIf
+	EndIf
+	
+	If value = 0
+		DrawImage(BlinkMeterIMG,x,y-8)
+	ElseIf value = 1
+		DrawImage(BlinkMeterIMG,x+(width/4)+1.5,y-8)
+	ElseIf value = 2
+		DrawImage(BlinkMeterIMG,x+(width/2)+3,y-8)
+	ElseIf value = 3
+		DrawImage(BlinkMeterIMG,x+(width*0.75)+4.5,y-8)
+	Else
+		DrawImage(BlinkMeterIMG,x+width+6,y-8)
+	EndIf
+	
+	Color 170,170,170
+	If value = 0
+		AAText(x+2,y+10+MenuScale,val1,True)
+	ElseIf value = 1
+		AAText(x+(width/4)+4.5,y+10+MenuScale,val2,True)
+	ElseIf value = 2
+		AAText(x+(width/2)+7,y+10+MenuScale,val3,True)
+	ElseIf value = 3
+		AAText(x+(width*0.75)+9.5,y+10+MenuScale,val4,True)
+	Else
+		AAText(x+width+12,y+10+MenuScale,val5,True)
 	EndIf
 	
 	Return value

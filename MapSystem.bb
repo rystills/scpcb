@@ -3,7 +3,7 @@
 Type Materials
 	Field name$
 	Field Diff
-	;Field Bump
+	Field Bump
 	
 	Field StepSound%
 End Type
@@ -27,14 +27,20 @@ Function LoadMaterials(file$)
 			
 			mat\name = Lower(TemporaryString)
 			
-			;If BumpEnabled Then
-			;	StrTemp = GetINIString(file, TemporaryString, "bump")
-			;	If StrTemp <> "" Then 
-			;		mat\Bump =  LoadTexture_Strict(StrTemp)
-			;		
-			;		TextureBlend mat\Bump, FE_BUMP				
-			;	EndIf
-			;EndIf
+			If BumpEnabled Then
+				StrTemp = GetINIString(file, TemporaryString, "bump")
+				If StrTemp <> "" Then 
+					mat\Bump =  LoadTexture_Strict(StrTemp)
+					
+					TextureBlend mat\Bump, 6
+					TextureBumpEnvMat mat\Bump,0,0,-0.012
+					TextureBumpEnvMat mat\Bump,0,1,-0.012
+					TextureBumpEnvMat mat\Bump,1,0,0.012
+					TextureBumpEnvMat mat\Bump,1,1,0.012
+					TextureBumpEnvOffset mat\Bump,0.5
+					TextureBumpEnvScale mat\Bump,1.0				
+				EndIf
+			EndIf
 			
 			mat\StepSound = (GetINIInt(file, TemporaryString, "stepsound")+1)
 		EndIf
@@ -272,12 +278,12 @@ Function GetTextureFromCache%(name$)
 	Return 0
 End Function
 
-;Function GetBumpFromCache%(name$)
-;	For tc.Materials=Each Materials
-;		If tc\name = name Then Return tc\Bump
-;	Next
-;	Return 0
-;End Function
+Function GetBumpFromCache%(name$)
+	For tc.Materials=Each Materials
+		If tc\name = name Then Return tc\Bump
+	Next
+	Return 0
+End Function
 
 Function GetCache.Materials(name$)
 	For tc.Materials=Each Materials
@@ -291,13 +297,21 @@ Function AddTextureToCache(texture%)
 	If tc.Materials=Null Then
 		tc.Materials=New Materials
 		tc\name=StripPath(TextureName(texture))
-		;Local temp$=GetINIString("Data\materials.ini",tc\name,"bump")
-		;If temp<>"" Then
-		;	tc\Bump=LoadTexture_Strict(temp)
-		;	TextureBlend tc\Bump,FE_BUMP
-		;Else
-		;	tc\Bump=0
-		;EndIf
+		If BumpEnabled Then
+			Local temp$=GetINIString("Data\materials.ini",tc\name,"bump")
+			If temp<>"" Then
+				tc\Bump=LoadTexture_Strict(temp)
+				TextureBlend tc\Bump,6
+				TextureBumpEnvMat tc\Bump,0,0,-0.012
+				TextureBumpEnvMat tc\Bump,0,1,-0.012
+				TextureBumpEnvMat tc\Bump,1,0,0.012
+				TextureBumpEnvMat tc\Bump,1,1,0.012
+				TextureBumpEnvOffset tc\Bump,0.5
+				TextureBumpEnvScale tc\Bump,1.0
+			Else
+				tc\Bump=0
+			EndIf
+		EndIf
 		tc\Diff=0
 	EndIf
 	If tc\Diff=0 Then tc\Diff=texture
@@ -306,7 +320,7 @@ End Function
 Function ClearTextureCache()
 	For tc.Materials=Each Materials
 		If tc\Diff<>0 Then FreeTexture tc\Diff
-		;If tc\Bump<>0 Then FreeTexture tc\Bump
+		If tc\Bump<>0 Then FreeTexture tc\Bump
 		Delete tc
 	Next
 End Function
@@ -314,8 +328,8 @@ End Function
 Function FreeTextureCache()
 	For tc.Materials=Each Materials
 		If tc\Diff<>0 Then FreeTexture tc\Diff
-		;If tc\Bump<>0 Then FreeTexture tc\Bump
-		tc\Diff = 0; : tc\Bump = 0
+		If tc\Bump<>0 Then FreeTexture tc\Bump
+		tc\Diff = 0 : tc\Bump = 0
 	Next
 End Function
 
@@ -434,12 +448,20 @@ Function LoadRMesh(file$,rt.RoomTemplates)
 				BrushTexture brush,blankTexture,0,0
 			EndIf
 		Else
-			
 			If tex[0]<>0 And tex[1]<>0 Then
+				bumptex% = GetBumpFromCache(StripPath(TextureName(tex[1])))
+				;If bumptex<>0 Then
+				;	DebugLog StripPath(TextureName(bumptex))
+				;	Stop
+				;EndIf
 				For j=0 To 1
-					BrushTexture brush,tex[j],0,j+1
+					BrushTexture brush,tex[j],0,j+1+(bumptex<>0)
 				Next
+				
 				BrushTexture brush,AmbientLightRoomTex,0
+				If (bumptex<>0) Then
+					BrushTexture brush,bumptex,0,1
+				EndIf
 			Else
 				For j=0 To 1
 					If tex[j]<>0 Then
@@ -1503,6 +1525,7 @@ Global Sky
 Global HideDistance# = 15.0
 
 Global SecondaryLightOn# = True
+Global PrevSecondaryLightOn# = True
 Global RemoteDoorOn = True
 Global Contained106 = False
 
@@ -2346,6 +2369,7 @@ Function FillRoom(r.Rooms)
 		Case "room2shaft"
 			;[Block]
 			d = CreateDoor(r\zone, r\x + 1552.0 * RoomScale, r\y, r\z + 552.0 * RoomScale, 0, r, False, False)
+			PositionEntity(d\buttons[0], EntityX(d\buttons[0],True), EntityY(d\buttons[0],True), r\z + 512.0 * RoomScale,True)
 			d\AutoClose = False : d\open = False
 			
 			d = CreateDoor(r\zone, r\x + 256.0 * RoomScale, r\y, r\z + 744.0 * RoomScale, 90, r, False, False, 2)
@@ -3307,7 +3331,7 @@ Function FillRoom(r.Rooms)
 			EntityParent(it\collider, r\obj)
 			
 			it = CreateItem("Gas Mask", "gasmask", r\x + 736.0 * RoomScale, r\y + 176.0 * RoomScale, r\z + 544.0 * RoomScale)
-			ScaleEntity(it\collider, 0.02, 0.02, 0.02) : EntityParent(it\collider, r\obj)
+			EntityParent(it\collider, r\obj)
 			
 			it = CreateItem("9V Battery", "bat", r\x + 736.0 * RoomScale, r\y + 176.0 * RoomScale, r\z - 448.0 * RoomScale)
 			EntityParent(it\collider, r\obj)
@@ -4839,6 +4863,10 @@ Function FillRoom(r.Rooms)
 			r\Objects[2] = CreatePivot(r\obj)
 			PositionEntity(r\Objects[2], (EntityX(r\Objects[1],True)+(126.0 * RoomScale)), EntityY(r\Objects[1],True), EntityZ(r\Objects[1],True), True)
 			it = CreateItem("First Aid Kit", "firstaid", r\x - 506.0 * RoomScale, r\y + 192.0 * RoomScale, r\z - 322.0 * RoomScale)
+			EntityParent(it\collider, r\obj)
+			it = CreateItem("Syringe", "syringe", r\x - 333.0 * RoomScale, r\y + 100.0 * RoomScale, r\z + 97.3 * RoomScale)
+			EntityParent(it\collider, r\obj)
+			it = CreateItem("Syringe", "syringe", r\x - 340.0 * RoomScale, r\y + 100.0 * RoomScale, r\z + 52.3 * RoomScale)
 			EntityParent(it\collider, r\obj)
 			r\RoomDoors[0] = CreateDoor(r\zone, r\x - 264.0 * RoomScale, r\y - 0.0 * RoomScale, r\z + 640.0 * RoomScale, 90, r, False, False, 3)
 			
@@ -7580,6 +7608,7 @@ End Function
 
 Type Chunk
 	Field obj%[128]
+	Field objShown%[128]
 	Field x#,z#,y#
 	Field Amount%
 	;Field debugobj%
@@ -7611,6 +7640,8 @@ Function CreateChunk.Chunk(obj%,x#,y#,z#,spawnNPCs%=True)
 					PositionEntity ch\obj[i],x#,y#,z#
 					;ScaleEntity ch\obj[i],RoomScale,RoomScale,RoomScale
 					MoveEntity ch\obj[i],EntityX(chp\obj[i]),0,EntityZ(chp\obj[i])
+					EntityType ch\obj[i],HIT_MAP
+					EntityPickMode ch\obj[i],2
 				Next
 				Exit
 			EndIf
@@ -7656,7 +7687,10 @@ Function UpdateChunks(r.Rooms,ChunkPartAmount%,spawnNPCs%=True)
 		;EndIf
 		If ch\obj[0]<>0
 			For i = 0 To ch\Amount
+				If (Not ch\objShown[i])
 				ShowEntity ch\obj[i]
+					ch\objShown[i]=True
+				EndIf
 			Next
 		EndIf
 		y# = ch\y
@@ -7717,6 +7751,7 @@ Function HideChunks()
 		If ch\obj[0]<>0
 			For i = 0 To ch\Amount
 				HideEntity ch\obj[i]
+				ch\objShown[i]=False
 			Next
 		EndIf
 	Next
