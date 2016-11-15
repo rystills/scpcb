@@ -1667,23 +1667,7 @@ Global menuroomscale# = 8.0 / 2048.0
 
 Global CurrMenu_TestIMG$ = ""
 
-Global ResolutionDetails% = GetINIInt(OptionFile,"options","res details")
-Global ResolutionScale# = 0.0
-Select ResolutionDetails
-	Case 0
-		ResolutionScale = 0.33
-	Case 1
-		ResolutionScale = 0.5
-	Case 2
-		ResolutionScale = 1.0
-	Case 3
-		ResolutionScale = 1.33
-	Case 4
-		ResolutionScale = 1.5
-End Select
-
 Global ParticleAmount% = GetINIInt(OptionFile,"options","particle amount")
-Global PropFading% = False ;GetINIInt(OptionFile,"options","prop fading")
 
 Dim NavImages(5)
 For i = 0 To 3
@@ -2728,7 +2712,6 @@ Repeat
 			Update294()
 			TimeCheckpointMonitors()
 			UpdateLeave1499()
-			If (PropFading) Then UpdateMapProps()
 		EndIf
 		
 		If InfiniteStamina% Then Stamina = Min(100, Stamina + (100.0-Stamina)*0.01*FPSfactor)
@@ -4111,12 +4094,13 @@ Function DrawGUI()
 	Else
 		KeypadInput = ""
 		KeypadTimer = 0
-		KeypadMSG= ""
+		KeypadMSG = ""
 	EndIf
 	
 	If KeyHit(1) And EndingTimer = 0 Then 
 		If MenuOpen Or InvOpen Then
 			ResumeSounds()
+			If OptionsMenu <> 0 Then SaveOptionsINI()
 			MouseXSpeed() : MouseYSpeed() : MouseZSpeed() : mouse_x_speed_1#=0.0 : mouse_y_speed_1#=0.0
 		Else
 			PauseSounds()
@@ -4749,16 +4733,6 @@ Function DrawGUI()
 									ShowEntity Light
 									LightFlash = 3
 									PlaySound_Strict(LoadTempSound("SFX\SCP\1123\Touch.ogg"))		
-									
-									;Remove 1123 from the player's inventory.
-									For z% = 0 To MaxItemAmount - 1
-										If Inventory(z) <> Null Then
-											If Inventory(z)\itemtemplate\tempname="1123" Then
-												DropItem(Inventory(z))
-												Exit
-											EndIf
-										EndIf
-									Next
 								EndIf
 								e\EventState = Max(1, e\EventState)
 								Exit
@@ -5953,41 +5927,7 @@ Function DrawMenu()
 				OptionsMenu = 0
 				QuitMSG = 0
 				MouseHit1 = False
-				PutINIValue(OptionFile, "options", "mouse sensitivity", MouseSens)
-				PutINIValue(OptionFile, "options", "invert mouse y", InvertMouse)
-				PutINIValue(OptionFile, "options", "bump mapping enabled", BumpEnabled)			
-				PutINIValue(OptionFile, "options", "HUD enabled", HUDenabled)
-				PutINIValue(OptionFile, "options", "screengamma", ScreenGamma)
-				PutINIValue(OptionFile, "options", "antialias", Opt_AntiAlias)
-				PutINIValue(OptionFile, "options", "vsync", Vsync)
-				PutINIValue(OptionFile, "options", "show FPS", ShowFPS)
-				PutINIValue(OptionFile, "options", "framelimit", Framelimit%)
-				PutINIValue(OptionFile, "options", "achievement popup enabled", AchvMSGenabled%)
-				PutINIValue(OptionFile, "options", "room lights enabled", EnableRoomLights%)
-				PutINIValue(OptionFile, "options", "texture details", TextureDetails%)
-				PutINIValue(OptionFile, "console", "enabled", CanOpenConsole%)
-				PutINIValue(OptionFile, "console", "auto opening", ConsoleOpening%)
-				PutINIValue(OptionFile, "options", "antialiased text", AATextEnable)
-				PutINIValue(OptionFile, "options", "res details",ResolutionDetails)
-				PutINIValue(OptionFile, "options", "particle amount",ParticleAmount)
-				PutINIValue(OptionFile, "options", "prop fading",PropFading)
-				
-				PutINIValue(OptionFile, "audio", "music volume", MusicVolume)
-				PutINIValue(OptionFile, "audio", "sound volume", PrevSFXVolume)
-				PutINIValue(OptionFile, "audio", "sfx release", EnableSFXRelease)
-				PutINIValue(OptionFile, "audio", "enable user tracks", EnableUserTracks%)
-				PutINIValue(OptionFile, "audio", "user track setting", UserTrackMode%)
-				
-				PutINIValue(OptionFile, "binds", "Right key", KEY_RIGHT)
-				PutINIValue(OptionFile, "binds", "Left key", KEY_LEFT)
-				PutINIValue(OptionFile, "binds", "Up key", KEY_UP)
-				PutINIValue(OptionFile, "binds", "Down key", KEY_DOWN)
-				PutINIValue(OptionFile, "binds", "Blink key", KEY_BLINK)
-				PutINIValue(OptionFile, "binds", "Sprint key", KEY_SPRINT)
-				PutINIValue(OptionFile, "binds", "Inventory key", KEY_INV)
-				PutINIValue(OptionFile, "binds", "Crouch key", KEY_CROUCH)
-				PutINIValue(OptionFile, "binds", "Save key", KEY_SAVE)
-				PutINIValue(OptionFile, "binds", "Console key", KEY_CONSOLE)
+				SaveOptionsINI()
 				
 				AntiAlias Opt_AntiAlias
 				TextureLodBias TextureFloat#
@@ -6066,22 +6006,6 @@ Function DrawMenu()
 					
 					y = y + 50*MenuScale
 					
-					Color 255,255,255
-					AAText(x, y, "Resolution quality:")
-					ResolutionDetails = Slider3(x+270*MenuScale,y+6*MenuScale,100*MenuScale,ResolutionDetails,1,"LOW","MEDIUM","FULL")
-					Color 255,255,255
-					Select ResolutionDetails
-						Case 0
-							ResolutionScale = 0.33
-						Case 1
-							ResolutionScale = 0.5
-						Case 2
-							ResolutionScale = 1.0
-					End Select
-					If (MouseOn(x + 270 * MenuScale, y-6*MenuScale, 100*MenuScale+14, 20) And OnSliderID=0) Or OnSliderID=1
-						DrawOptionsTooltip(tx,ty,tw,th,"resquality",ResolutionDetails)
-					EndIf
-					
 					y=y+50*MenuScale
 					
 					Color 255,255,255
@@ -6113,12 +6037,6 @@ Function DrawMenu()
 						DrawOptionsTooltip(tx,ty,tw,th+100*MenuScale,"texquality")
 					EndIf
 					
-					;Color 255,255,255
-					;AAText(x, y, "Enable prop fading:")
-					;PropFading = DrawTick(x + 270 * MenuScale, y + MenuScale, PropFading)
-					;If MouseOn(x+270*MenuScale,y+MenuScale,20*MenuScale,20*MenuScale) And OnSliderID=0
-					;	DrawOptionsTooltip(tx,ty,tw,th+100*MenuScale,"propfading")
-					;EndIf
 					;[End Block]
 				Case 2 ;Audio
 					AASetFont Font1
@@ -7046,11 +6964,6 @@ Function InitNewGame()
 		
 	Next
 	
-	Local tmpr.TempMapProps
-	For tmpr.TempMapProps = Each TempMapProps
-		Delete tmpr
-	Next
-	
 	Local rt.RoomTemplates
 	For rt.RoomTemplates = Each RoomTemplates
 		FreeEntity (rt\obj)
@@ -7417,10 +7330,6 @@ Function NullGame()
 	
 	For rt.RoomTemplates = Each RoomTemplates
 		rt\obj = 0
-	Next
-	
-	For mpr.MapProps = Each MapProps
-		Delete mpr
 	Next
 	
 	For i = 0 To 5
@@ -9353,6 +9262,46 @@ Function INI_CreateKey%(INI_lFileHandle%, INI_sKey$, INI_sValue$)
 	
 End Function
 
+;Save options to .ini.
+Function SaveOptionsINI()
+	
+	PutINIValue(OptionFile, "options", "mouse sensitivity", MouseSens)
+	PutINIValue(OptionFile, "options", "invert mouse y", InvertMouse)
+	PutINIValue(OptionFile, "options", "bump mapping enabled", BumpEnabled)			
+	PutINIValue(OptionFile, "options", "HUD enabled", HUDenabled)
+	PutINIValue(OptionFile, "options", "screengamma", ScreenGamma)
+	PutINIValue(OptionFile, "options", "antialias", Opt_AntiAlias)
+	PutINIValue(OptionFile, "options", "vsync", Vsync)
+	PutINIValue(OptionFile, "options", "show FPS", ShowFPS)
+	PutINIValue(OptionFile, "options", "framelimit", Framelimit%)
+	PutINIValue(OptionFile, "options", "achievement popup enabled", AchvMSGenabled%)
+	PutINIValue(OptionFile, "options", "room lights enabled", EnableRoomLights%)
+	PutINIValue(OptionFile, "options", "texture details", TextureDetails%)
+	PutINIValue(OptionFile, "console", "enabled", CanOpenConsole%)
+	PutINIValue(OptionFile, "console", "auto opening", ConsoleOpening%)
+	PutINIValue(OptionFile, "options", "antialiased text", AATextEnable)
+	PutINIValue(OptionFile, "options", "res details", ResolutionDetails)
+	PutINIValue(OptionFile, "options", "particle amount", ParticleAmount)
+	
+	PutINIValue(OptionFile, "audio", "music volume", MusicVolume)
+	PutINIValue(OptionFile, "audio", "sound volume", PrevSFXVolume)
+	PutINIValue(OptionFile, "audio", "sfx release", EnableSFXRelease)
+	PutINIValue(OptionFile, "audio", "enable user tracks", EnableUserTracks%)
+	PutINIValue(OptionFile, "audio", "user track setting", UserTrackMode%)
+	
+	PutINIValue(OptionFile, "binds", "Right key", KEY_RIGHT)
+	PutINIValue(OptionFile, "binds", "Left key", KEY_LEFT)
+	PutINIValue(OptionFile, "binds", "Up key", KEY_UP)
+	PutINIValue(OptionFile, "binds", "Down key", KEY_DOWN)
+	PutINIValue(OptionFile, "binds", "Blink key", KEY_BLINK)
+	PutINIValue(OptionFile, "binds", "Sprint key", KEY_SPRINT)
+	PutINIValue(OptionFile, "binds", "Inventory key", KEY_INV)
+	PutINIValue(OptionFile, "binds", "Crouch key", KEY_CROUCH)
+	PutINIValue(OptionFile, "binds", "Save key", KEY_SAVE)
+	PutINIValue(OptionFile, "binds", "Console key", KEY_CONSOLE)
+	
+End Function
+
 ;--------------------------------------- MakeCollBox -functions -------------------------------------------------------
 
 
@@ -9467,7 +9416,7 @@ Function RenderWorld2()
 	IsNVGBlinking% = False
 	HideEntity NVBlink
 	
-	CameraViewport Camera,0,0,GraphicWidth*ResolutionScale,GraphicHeight*ResolutionScale
+	CameraViewport Camera,0,0,GraphicWidth,GraphicHeight
 	
 	Local hasBattery% = 2
 	Local power% = 0
@@ -9496,15 +9445,7 @@ Function RenderWorld2()
 	Else
 		RenderWorld()
 	EndIf
-	
-	SetBuffer TextureBuffer(fresize_texture)
-	ClsColor 0,0,0 : Cls
-	CopyRect 0,0,GraphicWidth,GraphicHeight,1024-(GraphicWidth*ResolutionScale)/2,1024-(GraphicHeight*ResolutionScale)/2,BackBuffer(),TextureBuffer(fresize_texture)
-	SetBuffer BackBuffer()
-	ClsColor 0,0,0 : Cls
-	Local ratio# = (Float(GraphicWidth)/Float(GraphicHeight))/(Float(RealGraphicWidth)/Float(RealGraphicHeight))
-	ScaleRender(0,0,2050.0 / Float(GraphicWidth) * (ratio/ResolutionScale), 2050.0 / Float(GraphicWidth) * (ratio/ResolutionScale))
-	
+
 	If hasBattery=0 And WearingNightVision<>3
 		IsNVGBlinking% = True
 		ShowEntity NVBlink%
